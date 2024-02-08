@@ -1,80 +1,82 @@
-
-from numpy import diff
-
-
-def total_add(start_hours:int, hours_added:int, start_minutes:int, minutes_added:int, start_day:int) -> tuple[int, int]:
-    start_hours+= hours_added + start_day * 24
-    start_minutes += minutes_added
-    return (start_hours, start_minutes)
+def parse_minutes(minutes: int) -> tuple[int, int]:
+  return (minutes // 60, minutes % 60)
 
 
-def string_to_time(time:str)->tuple[int,int]:
-    new_hour = 0
-    new_minutes = 0
-    cur_string = ""
-    for char in time:
-        if char == ':':
-            new_hour = int(cur_string)
-            cur_string = ""
-            continue
-        cur_string+= char
-    new_minutes = int(cur_string)
-    return (new_hour, new_minutes)
+def parse_hours(hours: int) -> tuple[int, int]:
+  return (hours // 24, hours % 24)
 
 
+def parse_days_to_hours(day: str) -> int:
+  day_to_val = {
+      "monday": 0,
+      "tuesday": 1,
+      "wednesday": 2,
+      "thusday": 3,
+      "friday": 4,
+      "saturday": 5,
+      "sunday": 6,
+      "": 0
+  }
+  return day_to_val[day] * 24
 
-def time_to_string(new_hours:int, new_minutes:int, day:str="")->str:
-    num_to_day = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    ret_string = ""
-    ret_string += str(new_hours%12 + new_minutes//60) + ":" + "{:02d}".format(new_minutes%60)
-    day_to_num = {
-        'monday': 0,
-        'tuesday': 1,
-        'wednesday': 2,
-        'thursday': 3,
-        'friday': 4,
-        'saturday': 5, 
-        'sunday': 6,
-        '': 0
-    }
-    if (new_hours%24)//12== 1 and new_hours%24 == 1:
-        ret_string += " PM"
-    else:
-        ret_string += " AM"
-    if day != "" or new_hours//24 > 0:
-        difference = (new_hours + new_minutes//60)//24 - day_to_num[day.lower()] 
-        if day == "":
-            if difference == 1:
-                ret_string += " (next day)"
-            else:
-                ret_string += f'({difference} days later)'
-        else:
-            if difference == 1:
-                ret_string += f' {num_to_day[(day_to_num[day.lower()] + difference)%7]} (next day)'
-            else:
-                ret_string += f' {num_to_day[(day_to_num[day.lower()] + difference)%7]} ({difference} days later)'
-    return ret_string
 
-def add_time(start, duration, day = ""):
-    day_to_num = {
-        'monday': 0,
-        'tuesday': 1,
-        'wednesday': 2,
-        'thursday': 3,
-        'friday': 4,
-        'saturday': 5, 
-        'sunday': 6,
-        '': 0
-    }
-    am_pm  = start[-2:]
-    # print(start[0:-2])
-    start_hours,start_minutes = string_to_time(start[0:-2])
-    print(am_pm)
-    if am_pm == "PM" and start != 12:
-        start_hours += 12
-    hours_added,minutes_added = string_to_time(duration)
-    new_hours, new_minutes = total_add(start_hours, hours_added, start_minutes, minutes_added, day_to_num[day.lower()])
+def parse_val_to_time(hours_after: int, minutes_after: int) -> str:
+  hours_in_day = str(hours_after%12)
+  minutes_in_day = '{:02d}'.format(minutes_after)
+  if hours_after % 24 == 0:
+    return "12:" + minutes_in_day + " AM"
+  elif hours_after % 24 > 12:
+    return hours_in_day + ":"+ minutes_in_day + " PM"
+  elif hours_after % 24 == 12:
+    return "12:" + minutes_in_day + " PM"
+  return hours_in_day + ":" + minutes_in_day + " AM"
 
-    return time_to_string(new_hours, new_minutes, day)
 
-print(add_time("11:59 PM", "24:05", "Wednesday"))
+def parse_day_int_to_string(days_after: int) -> str:
+  val_to_day = [
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+      "Sunday"
+  ]
+  return val_to_day[days_after % 7]
+
+
+def parse_string_time(time: str,
+                      am_or_pm: str = "AM",
+                      day: str = "") -> tuple[int, int]:
+  hours_from_days = parse_days_to_hours(day)
+  hour_str = ""
+  min_str = ""
+  cur = ""
+  for char in time:
+    if char == ':':
+      hour_str = cur
+      cur = ""
+      continue
+    cur += char
+  min_str = cur
+  new_hour = int(hour_str)
+  new_min = int(min_str)
+  if am_or_pm == "PM":
+    new_hour += 12
+
+  return (new_hour + hours_from_days, new_min)
+
+
+def add_time(start: str, time_added: str, day: str = "") -> str:
+  hours_started, minutes_started = parse_string_time(start[0:-2], start[-2:],
+                                                     day.lower())
+  hours_added, minutes_added = parse_string_time(time_added)
+  days_initial, _ = parse_hours(hours_started)
+  hours_after, minutes_after = parse_minutes(minutes_started + minutes_added)
+  days_after, hours_after = parse_hours(hours_after + hours_added +
+                                        hours_started)
+  difference = days_after - days_initial
+  retString = ""
+  retString += parse_val_to_time(hours_after, minutes_after)
+  if day != "":
+    retString += ", " + parse_day_int_to_string(days_after)
+  if difference == 1:
+    retString += " (next day)"
+  if difference > 1:
+    retString += f' ({difference} days later)'
+  return retString
