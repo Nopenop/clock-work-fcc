@@ -1,10 +1,7 @@
-from multiprocessing import Value
-
-
 class Category:
     def __init__(self, cat_name:str):
         self.cat_name = cat_name
-        self.descriptions = {}
+        self.descriptions = {"":0}
     def __str__(self):
         retString = ""
         retString += f'{self.cat_name:*^30}\n'
@@ -14,9 +11,11 @@ class Category:
         return retString
     def deposit(self, amount:float, description:str):
         self.descriptions[description] = amount
-    def withdraw(self, amount:float, description:str):
+    def withdraw(self, amount:float, description:str=""):
         if not self.check_funds(-amount):
             return False
+        if description == "":
+            self.descriptions[""] -= amount
         self.descriptions[description] = -amount
         return True
     def get_balance(self):
@@ -34,7 +33,28 @@ def create_spend_chart(categories):
     retString = ""
     retString += "Percentage spent by category\n"
     total = sum(category.get_balance() for category in categories)
-    print(total)
+    percentages = list(int(((category.get_balance()/total)*10))*10 for category in categories)
+    print(percentages)
+    for i in range(100, -1 , -10):
+        retString += f'{i:>3}|'
+        for percentage in percentages:
+            if percentage >= i:
+                retString += ' O '
+            else:
+                retString += '   '
+        retString += ' \n'
+    retString += '    '
+    for i in range(len(percentages)):
+        retString+='---'
+    retString+='-\n'
+    for i in range(max(len(category.cat_name) for category in categories)):
+        retString+="    "
+        for j in range(len(categories)):
+            try:
+                retString += f' {categories[j].cat_name[i]} '
+            except IndexError:
+                retString += '   '
+        retString += ' \n'
     return retString
 
 
@@ -46,4 +66,4 @@ orange_juice = Category("Orange Juice")
 food.transfer(200,orange_juice)
 print(food)
 
-create_spend_chart([food, orange_juice])
+print(create_spend_chart([food, orange_juice]))
